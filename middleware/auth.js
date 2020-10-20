@@ -1,11 +1,8 @@
-const checkAuth = (req, res, next) => {
-  if (req.session.auth === 'ok') {
-    next();
-  } else {
-    res.redirect('/login')
-  }
+const ensureAuth = (req, res, done) => {
+  if (!req.isAuthenticated()) return res.redirect('/login');
+  return done();
 };
 
 module.exports = {
-  checkAuth
+  ensureAuth
 }

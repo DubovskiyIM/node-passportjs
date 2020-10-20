@@ -3,33 +3,14 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const passport = require('passport');
 const session = require('express-session');
+const flash = require('express-flash');
 
-// Models
 const { User } = require('./models/User.model');
 
-// Middlewares
-function checkAuth(req, res, next) {
-  if (req.isAuthenticated()) {
-    return next()
-  }
-  res.redirect('/login');
-}
+const { ensureAuth } = require('./middleware/auth');
 
-function checkNotAuth(req, res, next) {
-  if(req.isAuthenticated()) {
-    console.log(req.isAuthenticated())
-    return res.redirect('/');
-  }
-  next();
-}
-
-// Passport initializing
 const initializePassport = require('./passport.config');
-initializePassport(
-  passport,
-  async login => await User.findOne({ login }),
-  async _id => await User.findOne({ _id })
-);
+initializePassport(passport);
 
 const Router = express.Router();
 const PORT = 4321;
@@ -40,7 +21,7 @@ Router
   .route('/')
   .get((req, res) => {
     res.end('Привет мир!');
-  })
+  });
 
 app
   .use((req, res, next) => {
@@ -49,6 +30,7 @@ app
       .set(headers) && next();
   })
   .use(express.static('public'))
+  .use(flash())
   .use(bodyParser.json())
   .use(bodyParser.urlencoded({ extended: true }))
   .use(session({
@@ -59,20 +41,18 @@ app
   .use(passport.initialize())
   .use(passport.session())
   .use('/', Router)
+  .post('/login/check', passport.authenticate('local', {
+    successRedirect: '/users',
+    failureRedirect: '/login',
+    failureFlash: true
+  }))
+  .get('/users', ensureAuth, async r => {
+    const users = await User.find();
+    r.res.render('users', { users });
+  })
   .get('/logout', (req, res) => {
     req.logOut();
     res.redirect('/login');
-  })
-  .post('/login/check', passport.authenticate('local', {
-    successRedirect: '/',
-    failureRedirect: '/login'
-  }))
-  .get('/profile', checkAuth, r => {
-    r.res.send(r.session.login);
-  })
-  .get('/users', checkAuth, async r => {
-    const users = await User.find();
-    r.res.render('users', { users });
   })
   .use('/login', (req, res) => {
     res.render('login');

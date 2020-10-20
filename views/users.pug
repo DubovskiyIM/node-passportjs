@@ -51,7 +51,7 @@ html
             }
         link(rel='stylesheet', href='https://cdn.rawgit.com/twbs/bootstrap/48938155eb24b4ccdde09426066869504c6dab3c/dist/css/bootstrap.min.css')
     body
-        form(action="/logout" method="POST")
+        form(action="/logout" method="GET")
             button(type="submit") Logout
         ul(class='rounded')
             each user in users

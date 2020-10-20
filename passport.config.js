@@ -1,29 +1,37 @@
 const LocalStrategy = require('passport-local').Strategy;
+const { User } = require('./models/User.model');
 
-function initialize(passport, getUserByLogin, getUserById) {
-  const authenticateUser = async (login, password, done) => {
-    const user = await getUserByLogin(login);
-    if (!user) {
-      return done(null, false, { message: 'No user with that login!' })
-    }
-    try {
-      console.log('try');
-      if (user.pass === password) {
-        return done(null, user);
-      } else {
-        return done(null, false, { message: 'Passwords do not match!' })
+function initialize(passport) {
+  const authenticateUser = async function (login, password, done) {
+    await User.findOne({ login }, function (err, user) {
+      if (err) {
+        return done(err);
       }
-    } catch (e) {
-      console.error(e);
-      done(e)
-    }
-  };
+      if (!user) {
+        return done(null, false, { message: 'Incorrect username.' });
+      }
+      if (user.password !== password) {
+        return done(null, false, { message: 'Incorrect password.' });
+      }
+      return done(null, user);
+    });
+  }
 
   passport
     .use(new LocalStrategy({
-      loginField: 'login',
-      passField: 'password'
+      usernameField: 'login',
+      passwordField: 'pass'
     }, authenticateUser));
+
+  passport.serializeUser(function (user, done) {
+    done(null, user._id);
+  });
+
+  passport.deserializeUser(function (_id, done) {
+    User.findById(_id, function (err, user) {
+      done(err, user);
+    });
+  });
 }
 
 module.exports = initialize
